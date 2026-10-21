@@ -57,6 +57,7 @@ Most outages start with a change. Uptime monitors tell you *that* something brok
 
 | Feature | Status |
 | --- | --- |
+| Foundations: Spring Boot skeleton, Flyway migrations, Testcontainers integration test, Modulith boundary verification | 🚧 |
 | Account registration and login (session cookies, CSRF protection) | ⏳ |
 | Projects and monitors with per-user ownership checks | ⏳ |
 | Scheduled HTTP checks with connect/read timeouts | ⏳ |
@@ -97,38 +98,46 @@ ShipShape is a **modular monolith**: one deployable Spring Boot application spli
 | `monitoring` | Monitors, scheduler, HTTP checker, check results |
 | `incidents` | Incident detection and lifecycle |
 | `deployments` | Deploy ingest, API tokens, correlation |
+| `shared` | Small common types used by all modules |
 
 **Why not microservices?** Each module talks to the others through a narrow public API, so if monitoring ever needed to scale on its own, the module boundary is already the seam to split along. Until then, a single process avoids network calls, distributed transactions and extra infrastructure cost.
 
 ## Tech stack
 
-**Backend:** Java 21, Spring Boot, Spring Security (session cookies), Spring Data JPA, Spring Modulith, PostgreSQL, Flyway
-**Frontend:** React, TypeScript, Vite, Tailwind CSS, TanStack Query, Recharts
-**Testing:** JUnit 5, Testcontainers, WireMock, Vitest
-**DevOps:** Docker Compose, GitHub Actions, GitHub Container Registry, Terraform, AWS EC2
+- **Backend:** Java 21, Spring Boot 4, Spring Security (session cookies), Spring Data JPA, Spring Modulith, PostgreSQL 17, Flyway
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, TanStack Query, Recharts
+- **Testing:** JUnit 5, Testcontainers, WireMock, Vitest
+- **DevOps:** Docker Compose, GitHub Actions, GitHub Container Registry, Terraform, AWS EC2
 
 ## Getting started
 
 ### Prerequisites
 
 - Java 21
-- Node.js (LTS) and npm
 - A Docker runtime (Docker Desktop, OrbStack or Colima)
+- Node.js (LTS) and npm, for the frontend once it is added
 
-### 1. Start the database
+### 1. Configure and start the database
 
 ```bash
-docker compose up -d db
+cp .env.example .env
+# edit .env and set POSTGRES_PASSWORD (for example: openssl rand -hex 16)
+docker compose up -d
+docker compose ps   # wait until the status shows (healthy)
 ```
+
+PostgreSQL is published on `127.0.0.1:5433` by default. Set `POSTGRES_PORT` in `.env` to change it.
+
+> Local credentials live in `.env`, which is gitignored and never committed. `.env.example` lists the required variables with placeholder values.
 
 ### 2. Run the backend
 
 ```bash
 cd backend
-./mvnw spring-boot:run        # or ./gradlew bootRun
+./mvnw spring-boot:run
 ```
 
-Check it is up:
+The backend reads the same `.env` file, and Flyway applies database migrations on startup. Check it is up:
 
 ```bash
 curl http://localhost:8080/actuator/health
@@ -137,27 +146,16 @@ curl http://localhost:8080/actuator/health
 
 ### 3. Run the frontend
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The app runs at http://localhost:5173.
-
-> Local credentials in `docker-compose.yml` are for development only. Production secrets are stored in AWS SSM Parameter Store and are never committed.
+The frontend is coming in a later step of the roadmap.
 
 ## Running tests
 
 ```bash
-# Backend: unit + integration tests (Testcontainers starts its own PostgreSQL)
+# Backend: integration tests (Testcontainers starts its own PostgreSQL) + module boundary checks
 cd backend && ./mvnw test
-
-# Frontend
-cd frontend && npm test
 ```
 
-Backend tests do **not** depend on the Compose database; they are self-contained.
+Backend tests do **not** use the Compose database: Testcontainers starts a throwaway PostgreSQL 17 container and Flyway builds the schema from scratch on every run. Docker must be running.
 
 ## Project structure
 
@@ -170,25 +168,27 @@ shipshape/
 │       ├── incidents/
 │       ├── deployments/
 │       └── shared/
-├── frontend/           React + TypeScript SPA
-├── infra/              Terraform for AWS
+├── frontend/           React + TypeScript SPA (planned)
+├── infra/              Terraform for AWS (planned)
 ├── docs/               Architecture notes and assets
+├── .env.example
 └── docker-compose.yml
 ```
 
 ## Security
 
-Security decisions are documented here as they are implemented:
+Planned security design. Each item is marked ✅ once it is implemented and tested.
 
-- **Ownership checks:** every query for a project, monitor, incident or deployment is scoped to the current user; requests for another user's resources return `404`, not `403`, to avoid leaking existence.
-- **SSRF protection:** monitors accept user-supplied URLs, so the checker resolves DNS first and rejects private, loopback, link-local and metadata (`169.254.169.254`) addresses, including after redirects.
-- **API tokens:** deploy-ingest tokens are random, stored only as hashes, and shown to the user once.
-- **Sessions:** HTTP-only, `SameSite` session cookies with CSRF protection for state-changing requests.
-- **Secrets:** no secrets in the repository; production values come from AWS SSM Parameter Store.
+- ⏳ **Ownership checks:** every query for a project, monitor, incident or deployment is scoped to the current user; requests for another user's resources return `404`, not `403`, to avoid leaking existence.
+- ⏳ **SSRF protection:** monitors accept user-supplied URLs, so the checker resolves DNS first and rejects private, loopback, link-local and metadata (`169.254.169.254`) addresses, including after redirects.
+- ⏳ **API tokens:** deploy-ingest tokens are random, stored only as hashes, and shown to the user once.
+- ⏳ **Sessions:** HTTP-only, `SameSite` session cookies with CSRF protection for state-changing requests.
+- ✅ **Local secrets:** database credentials come from a gitignored `.env`; the local database port is bound to `127.0.0.1` only.
+- ⏳ **Production secrets:** will come from AWS SSM Parameter Store, never from the repository.
 
 ## Deployment
 
-ShipShape is built and tested locally, then deployed to AWS only when needed, to keep costs low.
+Planned. ShipShape is built and tested locally, then deployed to AWS only when needed, to keep costs low.
 
 1. GitHub Actions runs the test suites and pushes Docker images to GHCR.
 2. Terraform provisions an EC2 instance, security group and IAM role.
