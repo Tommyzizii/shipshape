@@ -36,3 +36,7 @@ infra/**/crash.log
 # build output
 build/
 target/
+
+# editor lock/backup files
+.LCK*
+*~
