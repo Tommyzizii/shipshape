@@ -1,3 +1,21 @@
 spring:
   application:
     name: shipshape
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:shipshape}
+    username: ${POSTGRES_USER:shipshape}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate: # Hibernate just check the schema but never change it
+      ddl-auto: validate
+    open-in-view: false
+  
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
