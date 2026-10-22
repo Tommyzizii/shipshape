@@ -199,7 +199,7 @@ Planned. ShipShape is built and tested locally, then deployed to AWS only when n
 
 The app is built in this order, each step on top of the last:
 
-1. [ ] **Foundations:** project skeleton, database migrations, enforced module boundaries
+1. [✅] **Foundations:** project skeleton, database migrations, enforced module boundaries
 2. [ ] **Identity:** registration, login, session cookies and CSRF protection
 3. [ ] **Projects and monitors:** CRUD with ownership checks on every query
 4. [ ] **Monitoring engine:** scheduler, HTTP checker with timeouts, SSRF protection
