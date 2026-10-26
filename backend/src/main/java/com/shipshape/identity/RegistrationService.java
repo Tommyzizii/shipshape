@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.shipshape.identity.internal.AppUser;
 import com.shipshape.identity.internal.AppUserRepository;
-import com.shipshape.identity.internal.EmailAlreadyTakenException;
 
 
 @Service 
