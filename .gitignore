@@ -40,3 +40,7 @@ target/
 # editor lock/backup files
 .LCK*
 *~
+
+# local AI assistant files
+CLAUDE.md
+docs/BUILD_PLAN.md
