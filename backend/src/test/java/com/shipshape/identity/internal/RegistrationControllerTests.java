@@ -55,4 +55,24 @@ class RegistrationControllerTests {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("Email is already registered"));
     }
+
+    @Test
+    void rejectsInvalidEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "not-an-email", "password": "correct-horse-battery"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsShortPassword() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "short@example.com", "password": "short-pass1"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
 }
