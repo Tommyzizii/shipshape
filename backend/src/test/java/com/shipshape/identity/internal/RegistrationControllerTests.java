@@ -75,4 +75,16 @@ class RegistrationControllerTests {
                                 """))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void rejectsPasswordOverBcryptByteLimit() throws Exception {
+        String body = """
+                {"email": "long@example.com", "password": "%s"}
+                """.formatted("é".repeat(40));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
 }
