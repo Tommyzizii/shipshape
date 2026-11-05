@@ -6,7 +6,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -17,9 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.shipshape.TestcontainersConfiguration;
 
+import jakarta.servlet.http.Cookie;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
+// .with(csrf()) in other test classes swaps the CSRF token repository inside the shared context;
+// this class needs the real cookie repository, so it starts from a fresh context
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 @Transactional
 class SecurityConfigTests {
 
@@ -45,6 +52,21 @@ class SecurityConfigTests {
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("Access is denied"));
+    }
+
+    @Test
+    void registerWithTokenFromCsrfEndpointSucceeds() throws Exception {
+        MvcResult csrfResult = mockMvc.perform(get("/api/auth/csrf")).andReturn();
+        Cookie xsrf = csrfResult.getResponse().getCookie("XSRF-TOKEN");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .cookie(xsrf)
+                        .header("X-XSRF-TOKEN", xsrf.getValue())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "spa@example.com", "password": "correct-horse-battery"}
+                                """))
+                .andExpect(status().isCreated());
     }
 
     @Test
