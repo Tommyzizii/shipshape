@@ -217,6 +217,8 @@ This section will be kept honest as the project develops. Current design trade-o
 - Single-instance scheduler: checks run inside one application instance, so horizontal scaling would need distributed locking or a dedicated worker.
 - Correlation is time-window based and explains its matches; it suggests suspects, it does not prove causation.
 - Single-region checks: a network problem between the checker and a service can look like an outage.
+- Account enumeration on signup: registering an email that is already taken returns `409 Conflict`, so anyone can check whether an address has an account. This favours a clear signup experience; the usual fixes (always answer "check your inbox" and send a verification email, plus rate limiting) are not implemented.
+- The 72-byte password check reports its validation error under `passwordWithinBcryptLimit` instead of `password`, because the constraint sits on a separate method; moving it to `password` would need a custom constraint.
 
 ## Author
 
