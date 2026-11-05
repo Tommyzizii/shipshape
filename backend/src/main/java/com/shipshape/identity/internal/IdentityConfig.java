@@ -6,7 +6,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
-public class IdentityConfig {
+class IdentityConfig {
 
     @Bean
     PasswordEncoder passwordEncoder() {
