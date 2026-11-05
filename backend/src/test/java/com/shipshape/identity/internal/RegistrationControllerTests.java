@@ -63,7 +63,10 @@ class RegistrationControllerTests {
                         .content("""
                                 {"email": "not-an-email", "password": "correct-horse-battery"}
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.errors.email").isArray())
+                .andExpect(jsonPath("$.errors.password").doesNotExist());
     }
 
     @Test
@@ -73,7 +76,10 @@ class RegistrationControllerTests {
                         .content("""
                                 {"email": "short@example.com", "password": "short-pass1"}
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.errors.password[0]").value("size must be between 12 and 72"))
+                .andExpect(jsonPath("$.errors.email").doesNotExist());
     }
 
     @Test
@@ -85,6 +91,9 @@ class RegistrationControllerTests {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.errors.passwordWithinBcryptLimit[0]").value("password must be at most 72 bytes"))
+                .andExpect(jsonPath("$.errors.email").doesNotExist());
     }
 }
