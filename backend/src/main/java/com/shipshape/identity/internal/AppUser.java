@@ -38,7 +38,7 @@ public class AppUser {
     }
 
     public static String normalizeEmail(String email) {
-        return email.trim().toLowerCase(Locale.ROOT);
+        return email.strip().toLowerCase(Locale.ROOT);
     }
 
     public Long getId() { 
