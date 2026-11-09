@@ -58,7 +58,7 @@ Most outages start with a change. Uptime monitors tell you *that* something brok
 | Feature | Status |
 | --- | --- |
 | Foundations: Spring Boot skeleton, Flyway migrations, Testcontainers integration test, Modulith boundary verification | ✅ |
-| Account registration and login (session cookies, CSRF protection) | ⏳ |
+| Account registration and login (session cookies, CSRF protection) | ✅ |
 | Projects and monitors with per-user ownership checks | ⏳ |
 | Scheduled HTTP checks with connect/read timeouts | ⏳ |
 | SSRF protection (blocks private, loopback, link-local and cloud-metadata addresses after DNS resolution) | ⏳ |
@@ -182,7 +182,11 @@ Planned security design. Each item is marked ✅ once it is implemented and test
 - ⏳ **Ownership checks:** every query for a project, monitor, incident or deployment is scoped to the current user; requests for another user's resources return `404`, not `403`, to avoid leaking existence.
 - ⏳ **SSRF protection:** monitors accept user-supplied URLs, so the checker resolves DNS first and rejects private, loopback, link-local and metadata (`169.254.169.254`) addresses, including after redirects.
 - ⏳ **API tokens:** deploy-ingest tokens are random, stored only as hashes, and shown to the user once.
-- ⏳ **Sessions:** HTTP-only, `SameSite` session cookies with CSRF protection for state-changing requests.
+- ✅ **Passwords:** hashed with BCrypt; 12–72 characters and at most 72 UTF-8 bytes (BCrypt's limit), so no password is silently truncated. Hashes never appear in responses or in the session.
+- ✅ **Sessions:** `HttpOnly`, `SameSite=Lax` session cookie; the session id changes at login (session fixation protection) and logout invalidates the session. The `Secure` flag will be enabled in production, where traffic is HTTPS.
+- ✅ **CSRF protection:** every state-changing request needs the token from the `XSRF-TOKEN` cookie echoed in an `X-XSRF-TOKEN` header, including login.
+- ✅ **Login errors:** a wrong password and an unknown email return the same `401` response, so login cannot be used to discover accounts.
+- ✅ **Error responses:** RFC 9457 Problem Details JSON, including `401`/`403` from the security layer; validation errors list the failing fields.
 - ✅ **Local secrets:** database credentials come from a gitignored `.env`; the local database port is bound to `127.0.0.1` only.
 - ⏳ **Production secrets:** will come from AWS SSM Parameter Store, never from the repository.
 
@@ -200,7 +204,7 @@ Planned. ShipShape is built and tested locally, then deployed to AWS only when n
 The app is built in this order, each step on top of the last:
 
 1. [x] **Foundations:** project skeleton, database migrations, enforced module boundaries
-2. [ ] **Identity:** registration, login, session cookies and CSRF protection
+2. [x] **Identity:** registration, login, session cookies and CSRF protection
 3. [ ] **Projects and monitors:** CRUD with ownership checks on every query
 4. [ ] **Monitoring engine:** scheduler, HTTP checker with timeouts, SSRF protection
 5. [ ] **Incident detection:** open/resolve state machine, tested against WireMock failure scenarios
@@ -218,6 +222,8 @@ This section will be kept honest as the project develops. Current design trade-o
 - Correlation is time-window based and explains its matches; it suggests suspects, it does not prove causation.
 - Single-region checks: a network problem between the checker and a service can look like an outage.
 - Account enumeration on signup: registering an email that is already taken returns `409 Conflict`, so anyone can check whether an address has an account. This favours a clear signup experience; the usual fixes (always answer "check your inbox" and send a verification email, plus rate limiting) are not implemented.
+- No login rate limiting or account lockout yet, so passwords can be guessed repeatedly.
+- The CSRF token is not rotated at login (the session id is).
 - The 72-byte password check reports its validation error under `passwordWithinBcryptLimit` instead of `password`, because the constraint sits on a separate method; moving it to `password` would need a custom constraint.
 
 ## Author

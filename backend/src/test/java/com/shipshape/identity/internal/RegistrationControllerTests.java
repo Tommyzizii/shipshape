@@ -7,6 +7,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -27,6 +28,7 @@ class RegistrationControllerTests {
     @Test
     void registersNewUser() throws Exception {
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email": "  New@Example.com ", "password": "correct-horse-battery"}
@@ -40,6 +42,7 @@ class RegistrationControllerTests {
     @Test
     void rejectsDuplicateEmail() throws Exception {
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email": "dup@example.com", "password": "correct-horse-battery"}
@@ -47,6 +50,7 @@ class RegistrationControllerTests {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email": "DUP@example.com", "password": "another-password-1"}
@@ -59,6 +63,7 @@ class RegistrationControllerTests {
     @Test
     void rejectsInvalidEmail() throws Exception {
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email": "not-an-email", "password": "correct-horse-battery"}
@@ -72,6 +77,7 @@ class RegistrationControllerTests {
     @Test
     void rejectsShortPassword() throws Exception {
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email": "short@example.com", "password": "short-pass1"}
@@ -89,6 +95,7 @@ class RegistrationControllerTests {
                 """.formatted("é".repeat(40));
 
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest())

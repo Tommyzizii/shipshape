@@ -18,6 +18,14 @@ spring:
       ddl-auto: validate
     open-in-view: false
   
+server:
+  servlet:
+    session:
+      cookie: # JavaScript cannot read the session cookie; it is not sent on cross-site POSTs
+        http-only: true
+        same-site: lax
+        # secure: true belongs in production (HTTPS only); local development runs over plain HTTP
+
 management:
   endpoints:
     web:
