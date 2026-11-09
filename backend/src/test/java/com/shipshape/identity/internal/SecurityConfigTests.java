@@ -6,6 +6,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -33,6 +35,12 @@ class SecurityConfigTests {
     @Autowired
     MockMvc mockMvc;
 
+    @Autowired
+    AppUserRepository users;
+
+    @Autowired
+    PasswordEncoder passwordEncoder;
+
     @Test
     void protectedApiWithoutSessionReturns401ProblemDetails() throws Exception {
         mockMvc.perform(get("/api/projects"))
@@ -56,8 +64,7 @@ class SecurityConfigTests {
 
     @Test
     void registerWithTokenFromCsrfEndpointSucceeds() throws Exception {
-        MvcResult csrfResult = mockMvc.perform(get("/api/auth/csrf")).andReturn();
-        Cookie xsrf = csrfResult.getResponse().getCookie("XSRF-TOKEN");
+        Cookie xsrf = csrfCookie();
 
         mockMvc.perform(post("/api/auth/register")
                         .cookie(xsrf)
@@ -73,5 +80,36 @@ class SecurityConfigTests {
     void healthIsPublic() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void logoutEndsSession() throws Exception {
+        users.saveAndFlush(new AppUser("tommy@example.com", passwordEncoder.encode("correct-horse-battery")));
+        Cookie xsrf = csrfCookie();
+
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/api/auth/login")
+                        .cookie(xsrf)
+                        .header("X-XSRF-TOKEN", xsrf.getValue())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "tommy@example.com", "password": "correct-horse-battery"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getRequest().getSession(false);
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .session(session)
+                        .cookie(xsrf)
+                        .header("X-XSRF-TOKEN", xsrf.getValue()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // What the SPA does on page load: fetch a token and receive the XSRF-TOKEN cookie
+    private Cookie csrfCookie() throws Exception {
+        MvcResult csrfResult = mockMvc.perform(get("/api/auth/csrf")).andReturn();
+        return csrfResult.getResponse().getCookie("XSRF-TOKEN");
     }
 }
