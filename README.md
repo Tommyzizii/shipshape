@@ -95,6 +95,7 @@ ShipShape is a **modular monolith**: one deployable Spring Boot application spli
 | Module | Responsibility |
 | --- | --- |
 | `identity` | Users, authentication, sessions |
+| `projects` | User-owned projects that group monitors, deployments and API tokens |
 | `monitoring` | Monitors, scheduler, HTTP checker, check results |
 | `incidents` | Incident detection and lifecycle |
 | `deployments` | Deploy ingest, API tokens, correlation |
@@ -164,6 +165,7 @@ shipshape/
 ├── backend/            Spring Boot application
 │   └── src/main/java/com/shipshape/
 │       ├── identity/
+│       ├── projects/
 │       ├── monitoring/
 │       ├── incidents/
 │       ├── deployments/
